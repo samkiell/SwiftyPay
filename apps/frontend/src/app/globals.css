@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+/*
+ * SwiftyPay design tokens.
+ * Premium neutral palette with an emerald accent, tuned for mobile viewports
+ * inside the Telegram Mini App. Light + dark themes share the same token names.
+ */
+:root {
+  --background: #fafafa;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --border: #e6e6e8;
+  --foreground: #0a0a0b;
+  --muted: #6b7280;
+  --accent: #10b981;
+  --accent-strong: #059669;
+  --accent-contrast: #ffffff;
+  --ring: rgba(16, 185, 129, 0.35);
+  --danger: #ef4444;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0b;
+    --surface: #131316;
+    --surface-elevated: #1b1b1f;
+    --border: #26262b;
+    --foreground: #f4f4f5;
+    --muted: #9ca3af;
+    --accent: #34d399;
+    --accent-strong: #10b981;
+    --accent-contrast: #052e22;
+    --ring: rgba(52, 211, 153, 0.32);
+    --danger: #f87171;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, Arial, sans-serif;
+  /* Respect safe areas on notched phones inside Telegram. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle elevated card used across screens. */
+.sp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 12px 32px -16px rgba(0, 0, 0, 0.25);
+}
+
+/* Primary action button. */
+.sp-btn-primary {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+  transition: transform 0.12s ease, filter 0.12s ease, opacity 0.12s ease;
+}
+.sp-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.sp-btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.sp-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Focus ring for inputs / controls. */
+.sp-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
+  border-color: var(--accent);
+}
