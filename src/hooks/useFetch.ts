@@ -30,6 +30,14 @@ export function useFetch<T>(
   const [error, setError] = useState<Error | null>(null);
   const [loading, setLoading] = useState<boolean>(immediate);
 
+  // Keep the latest fetcher in a ref so `run` stays referentially stable
+  // (the caller usually passes a fresh closure each render). Updated in an
+  // effect rather than during render to respect the rules of refs.
+  const fetcherRef = useRef(fetcher);
+  useEffect(() => {
+    fetcherRef.current = fetcher;
+  }, [fetcher]);
+
   // Track the latest run so out-of-order responses can't clobber state.
   const runId = useRef(0);
 
@@ -38,7 +46,8 @@ export function useFetch<T>(
     setLoading(true);
     setError(null);
 
-    fetcher()
+    fetcherRef
+      .current()
       .then((result) => {
         if (id === runId.current) setData(result);
       })
@@ -50,13 +59,17 @@ export function useFetch<T>(
       .finally(() => {
         if (id === runId.current) setLoading(false);
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, []);
 
+  // Re-run when the serialised dependency list changes. Serialising keeps the
+  // effect's dependency array a stable literal while still reacting to changes.
+  const depsKey = JSON.stringify(deps);
   useEffect(() => {
+    // Kicking off the request (which flips `loading`) on mount / dep change is
+    // the intended way to synchronise with an external system (the network).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (immediate) run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [run, immediate]);
+  }, [depsKey, immediate, run]);
 
   return { data, error, loading, refetch: run };
 }

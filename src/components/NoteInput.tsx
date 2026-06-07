@@ -19,7 +19,11 @@ export function NoteInput({ value, onChange, maxLength = 140 }: NoteInputProps) 
           maxLength={maxLength}
           placeholder="What's this for? e.g. For logo design"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          // Strip leading whitespace so the note can't start blank, and keep
+          // the value within the limit even if pasted.
+          onChange={(e) =>
+            onChange(e.target.value.replace(/^\s+/, '').slice(0, maxLength))
+          }
           className="sp-focus w-full resize-none rounded-2xl border border-border bg-surface px-4 py-3 text-base text-foreground placeholder:text-muted/50"
         />
         <span className="pointer-events-none absolute bottom-2.5 right-3 text-xs text-muted/70">

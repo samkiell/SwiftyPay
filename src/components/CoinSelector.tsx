@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bitcoin, Check, ChevronDown, CircleDollarSign, Coins } from 'lucide-react';
 import type { Coin } from '@/lib/api';
+import { useTelegram } from '@/hooks/useTelegram';
 
 interface CoinSelectorProps {
   value: Coin;
@@ -19,18 +20,32 @@ const COINS: { id: Coin; label: string; icon: typeof Coins }[] = [
 export function CoinSelector({ value, onChange }: CoinSelectorProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { haptic } = useTelegram();
 
-  // Close on outside click.
+  // Close on outside click and on Escape.
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
     document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
   }, []);
 
   const active = COINS.find((c) => c.id === value) ?? COINS[0];
   const ActiveIcon = active.icon;
+
+  function select(coin: Coin) {
+    haptic('selection');
+    onChange(coin);
+    setOpen(false);
+  }
 
   return (
     <div className="block" ref={ref}>
@@ -39,7 +54,7 @@ export function CoinSelector({ value, onChange }: CoinSelectorProps) {
         <button
           type="button"
           aria-haspopup="listbox"
-          aria-expanded={open}
+          aria-expanded={open ? 'true' : 'false'}
           onClick={() => setOpen((o) => !o)}
           className="sp-focus flex w-full items-center justify-between rounded-2xl border border-border bg-surface px-4 py-4 text-left"
         >
@@ -55,36 +70,33 @@ export function CoinSelector({ value, onChange }: CoinSelectorProps) {
         </button>
 
         {open && (
-          <ul
+          <div
             role="listbox"
+            aria-label="Select asset"
             className="sp-card absolute z-10 mt-2 w-full overflow-hidden p-1.5"
           >
             {COINS.map((coin) => {
               const Icon = coin.icon;
               const selected = coin.id === value;
               return (
-                <li key={coin.id}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    onClick={() => {
-                      onChange(coin.id);
-                      setOpen(false);
-                    }}
-                    className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left hover:bg-surface-elevated"
-                  >
-                    <span className="flex items-center gap-3">
-                      <Icon className="h-5 w-5 text-accent" aria-hidden />
-                      <span className="font-semibold text-foreground">{coin.id}</span>
-                      <span className="text-sm text-muted">{coin.label}</span>
-                    </span>
-                    {selected && <Check className="h-4 w-4 text-accent" aria-hidden />}
-                  </button>
-                </li>
+                <button
+                  key={coin.id}
+                  type="button"
+                  role="option"
+                  aria-selected={selected ? 'true' : 'false'}
+                  onClick={() => select(coin.id)}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left hover:bg-surface-elevated"
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon className="h-5 w-5 text-accent" aria-hidden />
+                    <span className="font-semibold text-foreground">{coin.id}</span>
+                    <span className="text-sm text-muted">{coin.label}</span>
+                  </span>
+                  {selected && <Check className="h-4 w-4 text-accent" aria-hidden />}
+                </button>
               );
             })}
-          </ul>
+          </div>
         )}
       </div>
     </div>

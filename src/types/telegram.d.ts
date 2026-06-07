@@ -18,6 +18,15 @@ interface TelegramWebAppUser {
   is_premium?: boolean;
 }
 
+type HapticImpactStyle = 'light' | 'medium' | 'heavy' | 'rigid' | 'soft';
+type HapticNotificationType = 'error' | 'success' | 'warning';
+
+interface TelegramHapticFeedback {
+  impactOccurred: (style: HapticImpactStyle) => void;
+  notificationOccurred: (type: HapticNotificationType) => void;
+  selectionChanged: () => void;
+}
+
 interface TelegramWebApp {
   ready: () => void;
   expand: () => void;
@@ -29,6 +38,7 @@ interface TelegramWebApp {
     auth_date?: string;
     hash?: string;
   };
+  colorScheme?: 'light' | 'dark';
   themeParams: {
     bg_color?: string;
     text_color?: string;
@@ -37,6 +47,8 @@ interface TelegramWebApp {
     button_color?: string;
     button_text_color?: string;
   };
+  HapticFeedback?: TelegramHapticFeedback;
+  openTelegramLink?: (url: string) => void;
   sendData: (data: string) => void;
 }
 

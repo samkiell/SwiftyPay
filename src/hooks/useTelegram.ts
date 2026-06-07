@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 /**
  * Shape returned by {@link useTelegram}. All fields are nullable because the
@@ -25,6 +25,13 @@ export interface UseTelegramResult {
   isTelegram: boolean;
   /** True once the SDK has been initialised on the client (post-mount). */
   isReady: boolean;
+  /** Fire a light selection/impact haptic (no-op outside Telegram). */
+  haptic: (
+    type?: 'selection' | HapticImpactStyle,
+    notification?: HapticNotificationType,
+  ) => void;
+  /** Open a Telegram link natively when possible, else fall back to the browser. */
+  openLink: (url: string) => void;
 }
 
 /**
@@ -33,15 +40,19 @@ export interface UseTelegramResult {
  * - Guards every lookup behind `typeof window !== 'undefined'` so it is SSR-safe.
  * - Calls `WebApp.ready()` and `WebApp.expand()` once on mount.
  * - Surfaces the most commonly needed values (user, username, userId, initData,
- *   themeParams) as flat, ready-to-use variables.
+ *   themeParams) as flat, ready-to-use variables, plus `haptic` and `openLink`.
  */
 export function useTelegram(): UseTelegramResult {
   const [webApp, setWebApp] = useState<TelegramWebApp | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // SSR guard — `window` only exists in the browser.
-    if (typeof window === 'undefined') return;
+    // One-time read from the Telegram SDK — an external system that only exists
+    // in the browser after the WebApp script has loaded. Syncing it into state
+    // on mount is the intended "subscribe to external system" pattern, so the
+    // synchronous setState here is deliberate.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (typeof window === 'undefined') return; // SSR guard
 
     const tg = window.Telegram?.WebApp;
     if (tg) {
@@ -49,10 +60,41 @@ export function useTelegram(): UseTelegramResult {
       tg.ready();
       tg.expand();
       setWebApp(tg);
+
+      // Sync the document color scheme to the Telegram client so the page
+      // matches the user's chosen light/dark theme inside the app.
+      if (tg.colorScheme) {
+        document.documentElement.style.colorScheme = tg.colorScheme;
+      }
     }
 
     setIsReady(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
+
+  const haptic = useCallback<UseTelegramResult['haptic']>(
+    (type = 'selection', notification) => {
+      const hf = webApp?.HapticFeedback;
+      if (!hf) return;
+      try {
+        if (notification) hf.notificationOccurred(notification);
+        else if (type === 'selection') hf.selectionChanged();
+        else hf.impactOccurred(type);
+      } catch {
+        // Older clients may not implement every haptic method — ignore.
+      }
+    },
+    [webApp],
+  );
+
+  const openLink = useCallback<UseTelegramResult['openLink']>(
+    (url) => {
+      if (typeof window === 'undefined') return;
+      if (webApp?.openTelegramLink) webApp.openTelegramLink(url);
+      else window.open(url, '_blank', 'noopener,noreferrer');
+    },
+    [webApp],
+  );
 
   const user = webApp?.initDataUnsafe?.user ?? null;
 
@@ -65,6 +107,8 @@ export function useTelegram(): UseTelegramResult {
     themeParams: webApp?.themeParams ?? null,
     isTelegram: webApp !== null,
     isReady,
+    haptic,
+    openLink,
   };
 }
 
